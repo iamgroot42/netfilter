@@ -1,16 +1,21 @@
+#define __KERNEL__
+#define MODULE
+#include <linux/netfilter_ipv4.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
-#include <linux/ip.h>
 #include <linux/netdevice.h>
 #include <linux/netfilter.h>
-#include <linux/netfilter_ipv4.h>
 #include <linux/skbuff.h>
+#include <linux/ip.h>
+#include <linux/udp.h> 
 
-MODULE_AUTHOR("Anshuman");
+
+MODULE_AUTHOR("iamgroot42");
 MODULE_DESCRIPTION("A netfilter kernel module. Made as a course assignment for Network Security (CSE550)");
 
 static struct nf_hook_ops netfilter_ops;
+struct sk_buff *sock_buff;
 
 unsigned int log_hook(){
 	printk(KERN_INFO "Cleaning up module.\n");
@@ -27,8 +32,16 @@ int syn_flood_drop(){
 	return 1;
 }
 
-int null_scan_drop(){
-	// null packet checking logic
+int null_scan_drop(struct sk_buff *buff){
+	if(!(buff->h.th)){
+		// TCP flag header is 0
+		return 1;
+	}
+	return 0;
+}
+
+int fin_scan_drop(){
+	// fin packet checking logic
 	return 1;
 }
 
@@ -38,11 +51,12 @@ unsigned int main_hook(
 	const struct net_device *in,
 	const struct net_device *out,
 	int (*okfn)(struct sk_buff*)){
-		if(xmas_attack_drop()){
+		sock_buff = *skb;
+		if(xmas_attack_drop(sock_buff)){
 			return NF_DROP;
-		}else if(syn_flood_drop()){
+		}else if(syn_flood_drop(sock_buff)){
 			return NF_DROP;
-		}else if(null_scan_drop()){
+		}else if(null_scan_drop(sock_buff)){
 			return NF_DROP;
 		}else if(){
 			return NF_DROP;
